@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glmlv/Image2DRGBA.hpp>
+#include <glmlv/scene_loading.hpp>
 
 int Application::run()
 {
@@ -283,6 +284,11 @@ Application::Application(int argc, char** argv):
     glGenSamplers(1, &m_textureSampler);
     glSamplerParameteri(m_textureSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glSamplerParameteri(m_textureSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // 3D Scene
+    glmlv::SceneData data;
+    const auto objPath = m_AssetsRootPath / m_AppName / "models" / "sponza" / "sponza.obj";
+    glmlv::loadObjScene(objPath, data);
     
     // Activate Depth Test
     glEnable(GL_DEPTH_TEST);
