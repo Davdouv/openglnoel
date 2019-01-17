@@ -5,7 +5,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glmlv/Image2DRGBA.hpp>
-#include <glmlv/scene_loading.hpp>
 
 int Application::run()
 {
@@ -20,12 +19,20 @@ int Application::run()
     GLint uDirectionalLightIntensity_location = glGetUniformLocation(m_program.glId(), "uDirectionalLightIntensity");
     GLint uPointLightPosition_location = glGetUniformLocation(m_program.glId(), "uPointLightPosition");
     GLint uPointLightIntensity_location = glGetUniformLocation(m_program.glId(), "uPointLightIntensity");
-    GLint uKd_location = glGetUniformLocation(m_program.glId(), "uKd");
 
+    GLint uKa_location = glGetUniformLocation(m_program.glId(), "uKa");
+    GLint uKd_location = glGetUniformLocation(m_program.glId(), "uKd");
+    GLint uKs_location = glGetUniformLocation(m_program.glId(), "uKs");
+    GLint uShininess_location = glGetUniformLocation(m_program.glId(), "uShininess");
+
+    GLint uKaSampler_Location = glGetUniformLocation(m_program.glId(), "uKaSampler");
     GLint uKdSampler_Location = glGetUniformLocation(m_program.glId(), "uKdSampler");
+    GLint uKsSampler_Location = glGetUniformLocation(m_program.glId(), "uKsSampler");
+    GLint uShininessSampler_Location = glGetUniformLocation(m_program.glId(), "uShininessSampler");
 
     // Création des matrices
-    glm::mat4 projMatrix(glm::perspective(70.f, (float)m_nWindowWidth/m_nWindowHeight, 0.1f, 100.f));
+    //glm::mat4 projMatrix(glm::perspective(70.f, (float)m_nWindowWidth/m_nWindowHeight, 0.1f, 100.f));
+    const auto projMatrix = glm::perspective(70.f, (float)m_nWindowWidth/m_nWindowHeight, 0.01f * m_SceneSize, m_SceneSize); // near = 1% de la taille de la scene, far = 100%
     glm::mat4 viewMatrix(glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
     glm::mat4 normalMatrix(glm::transpose(glm::inverse(viewMatrix)));
 
@@ -53,6 +60,7 @@ int Application::run()
     glm::vec3 sphereKd = { 1.0, 1.0, 1.0 };
     
     m_viewController.setViewMatrix(viewMatrix);
+    m_viewController.setSpeed(m_SceneSize * 0.1f); // 10% de la scene parcouru par seconde
 
     // Loop until the user closes the window
     for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount)
@@ -66,15 +74,24 @@ int Application::run()
 
         viewMatrix = m_viewController.getViewMatrix();
 
-            // Lumieres
+        // Lumieres
         glUniform3fv(uDirectionalLightDir_location, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(glm::normalize(dirLightDirection), 0))));
         glUniform3fv(uDirectionalLightIntensity_location, 1, glm::value_ptr(dirLightColor * dirLightIntensity));
         glUniform3fv(uPointLightPosition_location, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(pointLightPosition, 1))));
         glUniform3fv(uPointLightIntensity_location, 1, glm::value_ptr(pointLightColor * pointLightIntensity));
 
+        // Same sampler for all texture units
+        for (GLuint i : {0, 1, 2, 3})
+            glBindSampler(i, m_textureSampler);
+
+        // Set texture unit of each sampler
+        glUniform1i(uKaSampler_Location, 0);
+        glUniform1i(uKdSampler_Location, 1);
+        glUniform1i(uKsSampler_Location, 2);
+        glUniform1i(uShininessSampler_Location, 3);
+
+        /*
         glActiveTexture(GL_TEXTURE0);
-        glUniform1i(uKdSampler_Location, 0); // Set the uniform to 0 because we use texture unit 0
-        glBindSampler(0, m_textureSampler); // Tell to OpenGL what sampler we want to use on this texture unit
 
         // Render objects
         {   // CUBE
@@ -82,7 +99,7 @@ int Application::run()
                 // Transforms
             glUniformMatrix4fv(uModelViewProjMatrix_location, 1, GL_FALSE, glm::value_ptr(projMatrix * viewMatrix * modelMatrixCube));
             glUniformMatrix4fv(uModelViewMatrix_location, 1, GL_FALSE, glm::value_ptr(viewMatrix * modelMatrixCube));
-            glUniformMatrix4fv(uNormalMatrix_location, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+            glUniformMatrix4fv(uNormalMatrix_location, 1, GL_FALSE, glm::value_ptr(glm::transpose(glm::inverse(viewMatrix * modelMatrixCube))));
 
             glUniform3fv(uKd_location, 1, glm::value_ptr(cubeKd));
 
@@ -97,7 +114,7 @@ int Application::run()
                 // Transforms
             glUniformMatrix4fv(uModelViewProjMatrix_location, 1, GL_FALSE, glm::value_ptr(projMatrix * viewMatrix * modelMatrixSphere));
             glUniformMatrix4fv(uModelViewMatrix_location, 1, GL_FALSE, glm::value_ptr(viewMatrix * modelMatrixSphere));
-            glUniformMatrix4fv(uNormalMatrix_location, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+            glUniformMatrix4fv(uNormalMatrix_location, 1, GL_FALSE, glm::value_ptr(glm::transpose(glm::inverse(viewMatrix * modelMatrixSphere))));
 
             glUniform3fv(uKd_location, 1, glm::value_ptr(sphereKd));
 
@@ -105,9 +122,46 @@ int Application::run()
             glBindVertexArray(m_sphere_vao);
             glDrawElements(GL_TRIANGLES, m_sphere_vertices, GL_UNSIGNED_INT, nullptr);
             glBindVertexArray(0);
-        }
+        }        
 
         glBindTexture(GL_TEXTURE_2D, 0);
+        */
+
+        // Lambda to bind textures of the materials
+        const auto bindMaterial = [&](const PhongMaterial & material)
+        {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, material.KaTextureId);
+            glUniform3fv(uKd_location, 1, glm::value_ptr(material.Ka));
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, material.KdTextureId);
+            glUniform3fv(uKd_location, 1, glm::value_ptr(material.Kd));
+
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, material.KsTextureId);
+            glUniform3fv(uKd_location, 1, glm::value_ptr(material.Ks));
+
+            glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, material.shininessTextureId);
+            glUniform3fv(uKd_location, 1, &material.shininess);
+        };
+
+        {   // SCENE OBJ
+            glBindVertexArray(m_scene_vao);
+            for (const auto shape: m_shapes)
+            {
+                glUniformMatrix4fv(uModelViewProjMatrix_location, 1, GL_FALSE, glm::value_ptr(projMatrix * viewMatrix * shape.localToWorldMatrix));
+                glUniformMatrix4fv(uModelViewMatrix_location, 1, GL_FALSE, glm::value_ptr(viewMatrix * shape.localToWorldMatrix));
+                glUniformMatrix4fv(uNormalMatrix_location, 1, GL_FALSE, glm::value_ptr(glm::transpose(glm::inverse(viewMatrix * shape.localToWorldMatrix))));
+
+                const auto &material = (shape.materialID >= 0) ? m_SceneMaterials[shape.materialID] : m_defaultMaterial;
+                bindMaterial(material);
+                glDrawElements(GL_TRIANGLES, shape.indexCount, GL_UNSIGNED_INT, (const GLvoid*) (shape.indexOffset * sizeof(GLuint)));
+            }
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+
         glBindSampler(0, 0); // Unbind the sampler
 
         // GUI code:
@@ -184,6 +238,7 @@ Application::Application(int argc, char** argv):
 
     // Put here initialization code
 
+    // --- SHADERS --- //
     // Récupération des shaders
     const auto pathToVS = m_ShadersRootPath / m_AppName / "forward.vs.glsl";
     const auto pathToFS = m_ShadersRootPath / m_AppName / "forward.fs.glsl";
@@ -193,6 +248,10 @@ Application::Application(int argc, char** argv):
     m_program = glmlv::GLProgram(glmlv::compileProgram(shaderPaths));
     m_program.use();
     
+    const GLuint VERTEX_ATTR_POSITION = 0;
+    const GLuint VERTEX_ATTR_NORMAL = 1;
+    const GLuint VERTEX_ATTR_TEX_COORDS = 2;
+
     // --- CUBE --- //
     glmlv::SimpleGeometry cube = glmlv::makeCube();
         // VBO
@@ -210,9 +269,6 @@ Application::Application(int argc, char** argv):
     glGenVertexArrays(1, &m_cube_vao);
     glBindVertexArray(m_cube_vao);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cube_ibo);
-    const GLuint VERTEX_ATTR_POSITION = 0;
-    const GLuint VERTEX_ATTR_NORMAL = 1;
-    const GLuint VERTEX_ATTR_TEX_COORDS = 2;
     glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
     glEnableVertexAttribArray(VERTEX_ATTR_NORMAL);
     glEnableVertexAttribArray(VERTEX_ATTR_TEX_COORDS);
@@ -258,7 +314,7 @@ Application::Application(int argc, char** argv):
     glBindVertexArray(0);
     m_sphere_vertices = sphere.indexBuffer.size();
 
-    // TEXTURES
+    // --- TEXTURES --- //
     glActiveTexture(GL_TEXTURE0);
     {
         glmlv::Image2DRGBA image = glmlv::readImage(m_AssetsRootPath / m_AppName / "textures" / "bob.png");
@@ -285,11 +341,111 @@ Application::Application(int argc, char** argv):
     glSamplerParameteri(m_textureSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glSamplerParameteri(m_textureSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    // 3D Scene
-    glmlv::SceneData data;
+    // --- 3D SCENE --- //
+    glmlv::SceneData sceneData;
     const auto objPath = m_AssetsRootPath / m_AppName / "models" / "sponza" / "sponza.obj";
-    glmlv::loadObjScene(objPath, data);
+    glmlv::loadObjScene(objPath, sceneData);
+
+    m_SceneSize = glm::length(sceneData.bboxMax - sceneData.bboxMin);
+
+    std::cout << "# of shapes    : " << sceneData.shapeCount << std::endl;
+    std::cout << "# of materials : " << sceneData.materials.size() << std::endl;
+    std::cout << "# of vertex    : " << sceneData.vertexBuffer.size() << std::endl;
+    std::cout << "# of triangles    : " << sceneData.indexBuffer.size() / 3 << std::endl;
+    //std::cout << "bbox : " << sceneData.bboxMin << ", " << sceneData.bboxMax << std::endl;
+
+    // Fill VBO
+    glGenBuffers(1, &m_scene_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_scene_vbo);
+    glBufferStorage(GL_ARRAY_BUFFER, sceneData.vertexBuffer.size() * sizeof(glmlv::Vertex3f3f2f), sceneData.vertexBuffer.data(), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // Fill IBO
+    glGenBuffers(1, &m_scene_ibo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_scene_ibo);
+    glBufferStorage(GL_ARRAY_BUFFER, sceneData.indexBuffer.size() * sizeof(uint32_t), sceneData.indexBuffer.data(), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    m_indexCountPerShape = sceneData.indexCountPerShape;
+
+    // Init shapes
+    uint32_t indexOffset = 0;
+    for (auto shapeID = 0; shapeID < sceneData.indexCountPerShape.size(); ++shapeID)
+    {
+        m_shapes.emplace_back();
+        auto & shape = m_shapes.back();
+        shape.indexCount = sceneData.indexCountPerShape[shapeID];
+        shape.indexOffset = indexOffset;
+        shape.materialID = sceneData.materialIDPerShape[shapeID];
+        shape.localToWorldMatrix = sceneData.localToWorldMatrixPerShape[shapeID];
+        indexOffset += shape.indexCount;
+    }
+
+    // Fill VAO
+    glGenVertexArrays(1, &m_scene_vao);
+    glBindVertexArray(m_scene_vao);
+
+     // We tell OpenGL what vertex attributes our VAO is describing:
+    glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
+    glEnableVertexAttribArray(VERTEX_ATTR_NORMAL);
+    glEnableVertexAttribArray(VERTEX_ATTR_TEX_COORDS);
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_scene_vbo); // We bind the VBO because the next 3 calls will read what VBO is bound in order to know where the data is stored
+
+    glVertexAttribPointer(VERTEX_ATTR_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(glmlv::Vertex3f3f2f), (const GLvoid*)offsetof(glmlv::Vertex3f3f2f, position));
+    glVertexAttribPointer(VERTEX_ATTR_NORMAL, 3, GL_FLOAT, GL_FALSE, sizeof(glmlv::Vertex3f3f2f), (const GLvoid*)offsetof(glmlv::Vertex3f3f2f, normal));
+    glVertexAttribPointer(VERTEX_ATTR_TEX_COORDS, 2, GL_FLOAT, GL_FALSE, sizeof(glmlv::Vertex3f3f2f), (const GLvoid*)offsetof(glmlv::Vertex3f3f2f, texCoords));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0); // We can unbind the VBO because OpenGL has "written" in the VAO what VBO it needs to read when the VAO will be drawn
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_scene_ibo); // Binding the IBO to GL_ELEMENT_ARRAY_BUFFER while a VAO is bound "writes" it in the VAO for usage when the VAO will be drawn
+
+    glBindVertexArray(0);
+
+    // Textures
+    // Upload all textures to the GPU
+    std::vector<GLint> textureIds;
+    for (const auto & texture : sceneData.textures)
+    {
+        GLuint texId = 0;
+        glGenTextures(1, &texId);
+        glBindTexture(GL_TEXTURE_2D, texId);
+        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB32F, texture.width(), texture.height());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.width(), texture.height(), GL_RGBA, GL_UNSIGNED_BYTE, texture.data());
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        textureIds.emplace_back(texId);
+    }
+    // Attach texture IDs to materials (and store the materials)
+    for (const auto & material : sceneData.materials)
+    {
+        PhongMaterial newMaterial;
+        newMaterial.Ka = material.Ka;
+        newMaterial.Kd = material.Kd;
+        newMaterial.Ks = material.Ks;
+        newMaterial.shininess = material.shininess;
+        newMaterial.KaTextureId = material.KaTextureId >= 0 ? textureIds[material.KaTextureId] : m_cubeTextureKd;
+        newMaterial.KdTextureId = material.KdTextureId >= 0 ? textureIds[material.KdTextureId] : m_cubeTextureKd;
+        newMaterial.KsTextureId = material.KsTextureId >= 0 ? textureIds[material.KsTextureId] : m_cubeTextureKd;
+        newMaterial.shininessTextureId = material.shininessTextureId >= 0 ? textureIds[material.shininessTextureId] : m_cubeTextureKd;
+
+        m_SceneMaterials.emplace_back(newMaterial);
+    }
+
+    {
+        m_defaultMaterial.Ka = glm::vec3(0);
+        m_defaultMaterial.Kd = glm::vec3(1);
+        m_defaultMaterial.Ks = glm::vec3(1);
+        m_defaultMaterial.shininess = 32.f;
+        m_defaultMaterial.KaTextureId = m_cubeTextureKd;
+        m_defaultMaterial.KdTextureId = m_cubeTextureKd;
+        m_defaultMaterial.KsTextureId = m_cubeTextureKd;
+        m_defaultMaterial.shininessTextureId = m_cubeTextureKd;     
+    }
     
+
+    std::cout << "# textures " << textureIds.size() << std::endl;
+
     // Activate Depth Test
     glEnable(GL_DEPTH_TEST);
 }

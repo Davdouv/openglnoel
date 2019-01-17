@@ -5,6 +5,7 @@
 #include <glmlv/GLProgram.hpp>
 #include <glmlv/ViewController.hpp>
 #include <glmlv/simple_geometry.hpp>
+#include <glmlv/scene_loading.hpp>
 
 class Application
 {
@@ -39,4 +40,26 @@ private:
 
     glmlv::GLProgram m_program;
     glmlv::ViewController m_viewController;
+
+    GLuint m_scene_vbo;
+    GLuint m_scene_vao;
+    GLuint m_scene_ibo;
+
+    using PhongMaterial = glmlv::SceneData::PhongMaterial;
+
+    struct Shape
+    {
+        uint32_t indexCount; // Number of indices
+        uint32_t indexOffset; // Offset in GPU index buffer
+        int materialID = -1;
+        glm::mat4 localToWorldMatrix;
+    };
+
+    std::vector<uint32_t> m_indexCountPerShape;    
+    std::vector<PhongMaterial> m_SceneMaterials;
+    std::vector<Shape> m_shapes;
+
+    PhongMaterial m_defaultMaterial;
+    
+    float m_SceneSize = 0.f; // Used for camera speed and projection matrix parameters
 };
