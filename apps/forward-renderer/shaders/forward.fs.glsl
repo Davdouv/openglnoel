@@ -22,8 +22,8 @@ uniform sampler2D uKdSampler;
 uniform sampler2D uKsSampler;
 uniform sampler2D uShininessSampler;
 
-void main()
-{
+void main() {
+    // Texture colors
     vec3 ka = uKa * vec3(texture(uKaSampler, vTexCoords));
     vec3 kd = uKd * vec3(texture(uKdSampler, vTexCoords));
     vec3 ks = uKs * vec3(texture(uKsSampler, vTexCoords));
@@ -43,7 +43,7 @@ void main()
     float dothPointLight = shininess == 0 ? 1.f : max(0.f, dot(normal, hPointLight));
     float dothDirLight = shininess == 0 ? 1.f :max(0.f, dot(normal, hDirLight));
 
-    if (shininess != 1.f && shininess != 0.f)
+    fif (shininess != 1.f && shininess != 0.f)
     {
         dothPointLight = pow(dothPointLight, shininess);
         dothDirLight = pow(dothDirLight, shininess);

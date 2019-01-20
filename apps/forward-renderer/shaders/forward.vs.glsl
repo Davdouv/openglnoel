@@ -4,15 +4,14 @@ layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoords;
 
-uniform mat4 uModelViewProjMatrix;
-uniform mat4 uModelViewMatrix;
-uniform mat4 uNormalMatrix;
-
 // Sorties du shader
 out vec3 vViewSpacePosition; // Position du sommet transformé dans l'espace View
 out vec3 vViewSpaceNormal; // Normale du sommet transformé dans l'espace View
 out vec2 vTexCoords; // Coordonnées de texture du sommet
 
+uniform mat4 uModelViewProjMatrix;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uNormalMatrix;
 
 void main() {
    // Passage en coordonnées homogènes
