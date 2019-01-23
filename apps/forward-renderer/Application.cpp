@@ -132,7 +132,7 @@ int Application::run()
         {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, material.KaTextureId);
-            glUniform3fv(uKd_location, 1, glm::value_ptr(material.Ka));
+            glUniform3fv(uKa_location, 1, glm::value_ptr(material.Ka));
 
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, material.KdTextureId);
@@ -140,11 +140,11 @@ int Application::run()
 
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, material.KsTextureId);
-            glUniform3fv(uKd_location, 1, glm::value_ptr(material.Ks));
+            glUniform3fv(uKs_location, 1, glm::value_ptr(material.Ks));
 
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.shininessTextureId);
-            glUniform3fv(uKd_location, 1, &material.shininess);
+            glUniform1fv(uShininess_location, 1, &material.shininess);
         };
 
         {   // SCENE OBJ

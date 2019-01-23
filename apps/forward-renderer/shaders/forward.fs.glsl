@@ -43,7 +43,7 @@ void main() {
     float dothPointLight = shininess == 0 ? 1.f : max(0.f, dot(normal, hPointLight));
     float dothDirLight = shininess == 0 ? 1.f :max(0.f, dot(normal, hDirLight));
 
-    fif (shininess != 1.f && shininess != 0.f)
+    if (shininess != 1.f && shininess != 0.f)
     {
         dothPointLight = pow(dothPointLight, shininess);
         dothDirLight = pow(dothDirLight, shininess);
@@ -52,4 +52,4 @@ void main() {
     fColor = ka;
     fColor += kd * (uDirectionalLightIntensity * max(0.f, dot(normal, uDirectionalLightDir)) + pointLightIncidentLight * max(0., dot(normal, dirToPointLight)));
     fColor += ks * (uDirectionalLightIntensity * dothDirLight + pointLightIncidentLight * dothPointLight);
-}
+};
