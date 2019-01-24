@@ -30,13 +30,18 @@ private:
     GLuint m_textureSampler = 0; // Only one sampler object since we will use the sample sampling parameters for the two textures
     GLuint m_defaultTexture = 0;
 
-    glmlv::GLProgram m_program;
+    glmlv::GLProgram m_geometryProgram;
+    glmlv::GLProgram m_shadingProgram;
+
     glmlv::ViewController m_viewController;
 
     GLuint m_scene_vbo;
     GLuint m_scene_vao;
     GLuint m_scene_ibo;
     GLuint m_FBO;
+
+    GLuint m_triangle_VBO;  // Used for GBuffer pixels
+    GLuint m_triangle_VAO;  // Used for GBuffer pixels
 
     using PhongMaterial = glmlv::SceneData::PhongMaterial;
 
@@ -69,4 +74,14 @@ private:
     GLuint m_GBufferTextures[GBufferTextureCount];
     const GLenum m_GBufferTextureFormat[GBufferTextureCount] = { GL_RGB32F, GL_RGB32F, GL_RGB32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F };
     int m_frameBuffer = 0;
+    GLuint m_uGBufferSamplerLocations[GBufferTextureCount];
+
+    // Shadow Mapping
+    GLuint m_directionalSMTexture;
+    GLuint m_directionalSMFBO;
+    GLuint m_directionalSMSampler;
+    int32_t m_nDirectionalSMResolution = 512;
+
+    glmlv::GLProgram m_directionalSMProgram;
+    GLint m_uDirLightViewProjMatrix;
 };
