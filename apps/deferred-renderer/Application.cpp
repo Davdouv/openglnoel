@@ -247,6 +247,7 @@ Application::Application(int argc, char** argv):
     // --- SHADERS --- //
 
     // Lambda to get shadersPath
+    /* TO FIX
     const auto shadersPath = [&](const std::string vsName, const std::string fsName)
     {
         const auto pathToVS = m_ShadersRootPath / m_AppName / vsName;
@@ -254,11 +255,12 @@ Application::Application(int argc, char** argv):
         // Compilation et exécution des shaders
         const std::vector<glmlv::fs::path> shaderPaths {pathToVS, pathToFS};
         return shaderPaths;
-    }
+    };
 
     // GEMOTRY PASS
     const auto shadersPath = shadersPath("geometryPass.vs.glsl", "geometryPass.fs.glsl");
     m_geometryProgram = glmlv::GLProgram(glmlv::compileProgram(shadersPath));
+    */
 
     // SHADING PASS
     // Récupération des shaders
